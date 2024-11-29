@@ -1,0 +1,132 @@
+esphome:
+  name: thermistor-sensor
+  friendly_name: Thermistor Sensor
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "VYEl72RLe4OJemfZh43teUObmHjRGetShWx3+aoZQ+w="
+
+ota:
+  - platform: esphome 
+    password: "ad27f62e13124f81ed27811a47cb4b4d"
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+# Optional manual IP
+  manual_ip:
+    static_ip: 192.168.1.152
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0
+
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Thermistor-Sensor"
+    password: "uFpNQSBXsHbF"
+
+captive_portal:
+    
+
+# Analog Input Pin for the Thermistor
+sensor:
+ # Define the ADC sensor
+  - platform: adc
+    pin: GPIO34          # Replace with your GPIO pin
+    id: adc_sensor       # Reference ID for ADC sensor
+    name: "Thermistor Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 60s  # Update every second
+    accuracy_decimals: 3
+
+  - platform: adc
+    pin: GPIO35          # Replace with your GPIO pin
+    id: adc_sensor2       # Reference ID for ADC sensor
+    name: "Thermistor2 Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 60s  # Update every second
+    accuracy_decimals: 3 
+
+  - platform: adc
+    pin: GPIO32          # Replace with your GPIO pin
+    id: adc_sensor3       # Reference ID for ADC sensor
+    name: "Thermistor3 Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 60s  # Update every second
+    accuracy_decimals: 3 
+
+  - platform: adc
+    pin: GPIO33          # Replace with your GPIO pin
+    id: adc_sensor4       # Reference ID for ADC sensor
+    name: "Thermistor4 Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 60s  # Update every second
+    accuracy_decimals: 3 
+
+  # Define the resistance sensor
+  - platform: resistance
+    id: resistance_sensor
+    sensor: adc_sensor   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: DOWNSTREAM
+
+  - platform: resistance
+    id: resistance_sensor2
+    sensor: adc_sensor2   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: DOWNSTREAM
+
+  - platform: resistance
+    id: resistance_sensor3
+    sensor: adc_sensor3   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: DOWNSTREAM
+
+  - platform: resistance
+    id: resistance_sensor4
+    sensor: adc_sensor4   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: DOWNSTREAM
+
+
+  # Configure the NTC thermistor using the resistance sensor
+  - platform: ntc
+    name: "NTC Temperature"
+    sensor: resistance_sensor   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C
+
+  - platform: ntc
+    name: "NTC Temperature 2"
+    sensor: resistance_sensor2   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C
+
+  - platform: ntc
+    name: "NTC Temperature 3"
+    sensor: resistance_sensor3   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C
+
+  - platform: ntc
+    name: "NTC Temperature 4"
+    sensor: resistance_sensor4   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C            
