@@ -9,4 +9,7 @@ Various files for home assistant and esp home
    ![Alt text](IMG_2024-11-15-13-33-43-484.jpg)
    ![Alt text](IMG_2024-11-15-13-34-35-378.jpg)
    
-3) 
+2) NTC Thermistor Sensor
+   Device for up to 4 thermistors NTC can be tracked.
+   You must have a 10K resistor between the ESP32 pin and the ground for each thermistor.
+   These Thermistors can be found here https://www.aliexpress.com/item/1005005988152345.html
