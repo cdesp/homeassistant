@@ -1,0 +1,282 @@
+esphome:
+  name: oilthermistor-sensor
+  friendly_name: OilThermistor Sensor
+
+esp32:
+  board: esp32dev
+  framework:
+    type: arduino
+
+# Enable logging
+logger:
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "JkXgqTn163f3CoRhBraKVQju/DLVI2nuYIlCBhxJ46g="
+
+ota:
+  - platform: esphome
+    password: "9b9d418ca1dfcf39b6981a2c65c8fd99"
+
+
+wifi:
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
+
+# Optional manual IP
+  manual_ip:
+    static_ip: 192.168.1.153
+    gateway: 192.168.1.1
+    subnet: 255.255.255.0      
+
+  # Enable fallback hotspot (captive portal) in case wifi connection fails
+  ap:
+    ssid: "Oilthermistor-Sensor"
+    password: "NyBps3QkXWCO"
+
+captive_portal:
+    
+
+# Enable Web server.
+web_server:
+  port: 80
+# Sync time with Home Assistant.
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+
+# Text sensors with general information.
+text_sensor:
+  # Expose ESPHome version as sensor.
+  - platform: version
+    name: oilthermistor-sensor ESPHome Version
+  # Expose WiFi information as sensors.
+  - platform: wifi_info
+    ip_address:
+      name: oilthermistor-sensor IP
+    ssid:
+      name: oilthermistor-sensor SSID
+    bssid:
+      name: oilthermistor-sensor BSSID
+
+# Exposed switches.
+# Switch to restart the sensor.   
+switch:
+  - platform: restart
+    name: "oilthermistor-sensor Restart"
+
+sensor:
+  # Uptime sensor.
+  - platform: uptime
+    name: oilthermistor-sensor Uptime
+
+  # WiFi Signal sensor.
+  - platform: wifi_signal
+    name: oilthermistor-sensor WiFi Signal
+    update_interval: 60s
+
+# Wifi signal sensor.
+  - platform: wifi_signal
+    name: oilthermistor-sensor_wifi
+    update_interval: 600s
+    unit_of_measurement: '%'
+    filters:
+    - lambda: |-
+       if (x <= -100) {
+         return 0;
+       } else {
+         if (x >= -50) {
+           return 100;
+         } else {
+           return 2 * (x + 100);
+         }
+       }
+
+  - platform: ultrasonic
+    accuracy_decimals: 2
+    trigger_pin:
+      number: GPIO17
+      inverted: true
+    echo_pin:
+      number: GPIO18
+    timeout: 5.98m  
+    pulse_time: 20us
+    name: "Oil Tank Sensor"
+    id: oil_tank_sensor
+    update_interval: 10min
+    unit_of_measurement: "m"    
+    filters:
+     - filter_out: nan
+    on_value:
+       then:
+         - sensor.template.publish:
+             id: oiltank_liters              
+             state: !lambda |-
+               // Distance in cm (raw value from the sensor)
+               float distance = x*100;
+
+               // Handle values outside the known range
+               if (distance <= 15) {
+                 return 1000.0; // Max capacity
+               } else if (distance >= 121.1) {
+                 return 0.0; // Empty
+               }
+
+               // Define the mapping of distances (in cm) to oil levels (in liters)
+               if (distance <= 30) {
+                 return 1000.0 - ((1000.0 - 875.0) / (30.0 - 15.0)) * (distance - 15.0);
+               } else if (distance <= 39) {
+                 return 875.0 - ((875.0 - 800.0) / (39.0 - 30.0)) * (distance - 30.0);
+               } else if (distance <= 49) {
+                 return 800.0 - ((800.0 - 700.0) / (49.0 - 39.0)) * (distance - 39.0);
+               } else if (distance <= 58) {
+                 return 700.0 - ((700.0 - 600.0) / (58.0 - 49.0)) * (distance - 49.0);
+               } else if (distance <= 67.8) {
+                 return 600.0 - ((600.0 - 500.0) / (67.8 - 58.0)) * (distance - 58.0);
+               } else if (distance <= 77.3) {
+                 return 500.0 - ((500.0 - 400.0) / (77.3 - 67.8)) * (distance - 67.8);
+               } else if (distance <= 87.3) {
+                 return 400.0 - ((400.0 - 300.0) / (87.3 - 77.3)) * (distance - 77.3);
+               } else if (distance <= 97.1) {
+                 return 300.0 - ((300.0 - 200.0) / (97.1 - 87.3)) * (distance - 87.3);
+               } else if (distance <= 109.1) {
+                 return 200.0 - ((200.0 - 100.0) / (109.1 - 97.1)) * (distance - 97.1);
+               } else {
+                 return 100.0 - ((100.0 - 0.0) / (121.1 - 109.1)) * (distance - 109.1);
+               }              
+         - sensor.template.publish:
+             id: oiltank_percent
+             state: !lambda 'const int volume =1000; return id(oiltank_liters).state/volume *100;' 
+ 
+
+    # Templates for calculated liter & percent
+  - platform: template
+    name: oiltank liters
+    id: oiltank_liters
+    icon: 'mdi:water'
+    unit_of_measurement: 'l'
+    accuracy_decimals: 0
+
+  - platform: template
+    name: oiltank percent
+    id: oiltank_percent
+    icon: 'mdi:water-percent'
+    unit_of_measurement: '%'
+
+
+   
+
+# Analog Input Pin for the Thermistor
+ # Define the ADC sensor
+  - platform: adc
+    pin: GPIO34          # Replace with your GPIO pin
+    id: adc_sensor       # Reference ID for ADC sensor
+    name: "Thermistor Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 30s  # Update every second
+    accuracy_decimals: 3
+
+  - platform: adc
+    pin: GPIO35          # Replace with your GPIO pin
+    id: adc_sensor2       # Reference ID for ADC sensor
+    name: "Thermistor2 Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 30s  # Update every second
+    accuracy_decimals: 3 
+
+  - platform: adc
+    pin: GPIO39        # Replace with your GPIO pin
+    id: adc_sensor3       # Reference ID for ADC sensor
+    name: "Thermistor3 Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 30s  # Update every second
+    accuracy_decimals: 3 
+
+  - platform: adc
+    pin: GPIO33          # Replace with your GPIO pin
+    id: adc_sensor4       # Reference ID for ADC sensor
+    name: "Thermistor4 Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 30s  # Update every second
+    accuracy_decimals: 3 
+
+  - platform: adc
+    pin: GPIO32          # Replace with your GPIO pin
+    id: adc_sensor5       # Reference ID for ADC sensor
+    name: "Thermistor5 Voltage"
+    attenuation: 12db    # Use 12db for full 0-3.3V range on ESP32
+    update_interval: 30s  # Update every second
+    accuracy_decimals: 3 
+
+  # Define the resistance sensor
+  - platform: resistance
+    id: resistance_sensor
+    sensor: adc_sensor   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: UPSTREAM
+
+  - platform: resistance
+    id: resistance_sensor2
+    sensor: adc_sensor2   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: UPSTREAM
+
+  - platform: resistance
+    id: resistance_sensor3
+    sensor: adc_sensor3   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: UPSTREAM
+
+  - platform: resistance
+    id: resistance_sensor4
+    sensor: adc_sensor4   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: UPSTREAM
+
+  - platform: resistance
+    id: resistance_sensor5
+    sensor: adc_sensor5   # Reference the ADC sensor
+    resistor: 10kOhm
+    configuration: UPSTREAM
+
+  # Configure the NTC thermistor using the resistance sensor
+  - platform: ntc
+    name: "NTC Temperature"
+    sensor: resistance_sensor   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C
+
+  - platform: ntc
+    name: "NTC Temperature 2"
+    sensor: resistance_sensor2   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C
+
+  - platform: ntc
+    name: "NTC Temperature 3"
+    sensor: resistance_sensor3   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C
+
+  - platform: ntc
+    name: "NTC Temperature 4"
+    sensor: resistance_sensor4   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C                
+
+  - platform: ntc
+    name: "NTC Temperature 5"
+    sensor: resistance_sensor5   # Reference the resistance sensor ID
+    calibration:
+      - 1.0kOhm -> 0°C          # Resistance at 0°C
+      - 10.0kOhm -> 25°C        # Resistance at 25°C
+      - 100.0kOhm -> 85°C       # Resistance at 85°C                 
